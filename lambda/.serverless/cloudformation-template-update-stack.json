@@ -1,0 +1,326 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The AWS CloudFormation template for this Serverless application",
+  "Resources": {
+    "ServerlessDeploymentBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ServerlessDeploymentBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "ServerlessDeploymentBucket"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:*",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      },
+                      "/*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      }
+                    ]
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "SourceLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/event-filter-dev-source"
+      }
+    },
+    "StatusLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/event-filter-dev-status"
+      }
+    },
+    "SourceLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/event-filter/dev/1638926969989-2021-12-08T01:29:29.989Z/event-filter.zip"
+        },
+        "Handler": "handler_bd.source_handler",
+        "Runtime": "python3.8",
+        "FunctionName": "event-filter-dev-source",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Role": {
+          "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+        }
+      },
+      "DependsOn": [
+        "SourceLogGroup"
+      ]
+    },
+    "StatusLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/event-filter/dev/1638926969989-2021-12-08T01:29:29.989Z/event-filter.zip"
+        },
+        "Handler": "handler_sqs.status_handler",
+        "Runtime": "python3.8",
+        "FunctionName": "event-filter-dev-status",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Role": {
+          "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+        }
+      },
+      "DependsOn": [
+        "StatusLogGroup"
+      ]
+    },
+    "SourceLambdaVersionUjt8CnO8pV6PcS2Gud0I7ORqJb5m75sJRdGGbMkSAWY": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "SourceLambdaFunction"
+        },
+        "CodeSha256": "QT7ZvHTohwRjAdYLk9D9Q1jRFCxKzyip8dO+V6LyuYg="
+      }
+    },
+    "StatusLambdaVersionWqCde0IJ9dEK0MfZEwTrztEzYw8wp4i1wxCGjAscz04": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "StatusLambdaFunction"
+        },
+        "CodeSha256": "QT7ZvHTohwRjAdYLk9D9Q1jRFCxKzyip8dO+V6LyuYg="
+      }
+    },
+    "Eventfilterdevsourcerule1EventBridgeRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "EventBusName": "pizzaria",
+        "EventPattern": {
+          "source": [
+            "com.pizza.status"
+          ]
+        },
+        "Name": "event-filter-dev-source-rule-1",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "SourceLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "event-filter-dev-source-rule-1-target"
+          }
+        ]
+      }
+    },
+    "SourceEventBridgeLambdaPermission1": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Ref": "SourceLambdaFunction"
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            ":",
+            [
+              "arn",
+              {
+                "Ref": "AWS::Partition"
+              },
+              "events",
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Ref": "AWS::AccountId"
+              },
+              {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "rule",
+                    "pizzaria",
+                    "event-filter-dev-source-rule-1"
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    "Eventfilterdevstatusrule1EventBridgeRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "EventBusName": "pizzaria",
+        "EventPattern": {
+          "source": [
+            "com.pizza.status"
+          ],
+          "detail-type": [
+            "Alteracao Pizza"
+          ],
+          "detail": {
+            "status": [
+              "pronto"
+            ]
+          }
+        },
+        "Name": "event-filter-dev-status-rule-1",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "StatusLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "event-filter-dev-status-rule-1-target"
+          }
+        ]
+      }
+    },
+    "StatusEventBridgeLambdaPermission1": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Ref": "StatusLambdaFunction"
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            ":",
+            [
+              "arn",
+              {
+                "Ref": "AWS::Partition"
+              },
+              "events",
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Ref": "AWS::AccountId"
+              },
+              {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "rule",
+                    "pizzaria",
+                    "event-filter-dev-status-rule-1"
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    "StatusEventSourceMappingSQSEsperaentrega": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "DependsOn": [],
+      "Properties": {
+        "BatchSize": 1,
+        "EventSourceArn": "arn:aws:sqs:us-east-1:732421282977:espera-entrega",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "StatusLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Enabled": true
+      }
+    }
+  },
+  "Outputs": {
+    "ServerlessDeploymentBucketName": {
+      "Value": {
+        "Ref": "ServerlessDeploymentBucket"
+      },
+      "Export": {
+        "Name": "sls-event-filter-dev-ServerlessDeploymentBucketName"
+      }
+    },
+    "SourceLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "SourceLambdaVersionUjt8CnO8pV6PcS2Gud0I7ORqJb5m75sJRdGGbMkSAWY"
+      },
+      "Export": {
+        "Name": "sls-event-filter-dev-SourceLambdaFunctionQualifiedArn"
+      }
+    },
+    "StatusLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "StatusLambdaVersionWqCde0IJ9dEK0MfZEwTrztEzYw8wp4i1wxCGjAscz04"
+      },
+      "Export": {
+        "Name": "sls-event-filter-dev-StatusLambdaFunctionQualifiedArn"
+      }
+    }
+  }
+}
