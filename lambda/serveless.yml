@@ -1,0 +1,47 @@
+service: event-filter
+
+frameworkVersion: '2'
+provider:
+  name: aws
+  runtime: python3.8
+  lambdaHashingVersion: 20201221
+  iam:
+    role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+  eventBridge:
+    useCloudFormation: true
+
+functions:
+  source:
+    handler: handler_bd.source_handler
+    events:
+      - eventBridge:
+          eventBus:
+            - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/pizzaria
+          pattern:
+            source:
+              - com.pizza.status
+  status:
+    handler: handler_sqs.status_handler
+      events:
+        - eventBridge:
+            eventBus:
+              - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/pizzaria
+            pattern:
+              source:
+                - com.pizza.status
+              detail-type:
+                - Alteracao Pizza
+              detail:
+                status:
+                  - pronto
+        - sqs:
+            arn: arn:aws:sqs:us-east-1:732421282977:espera-entrega
+            batchsize: 1
+            enabled: true
+  delivered:
+    handler: handler_sqs.update_handler
+      events:
+        - sqs:
+            arn: arn:aws:sqs:us-east-1:732421282977:espera-entrega
+            batchsize: 1
+            enabled: true
