@@ -35,7 +35,7 @@ functions:
               status:
                 - pronto
       - sqs:
-          arn: arn:aws:sqs:us-east-1:732421282977:espera-entrega
+          arn: arn:aws:sqs:${aws:region}:${aws:accountId}:espera-entrega
           batchSize: 1
           enabled: true
   cron:
