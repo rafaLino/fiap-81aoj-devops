@@ -13,12 +13,12 @@ class BaseDAO:
             ReturnConsumedCapacity='TOTAL'
         )
 
-    def update_item(self, key, update_expression, update_values):
+    def update_item(self, key, update_expression, update_name, update_values):
         return self.__table.update_item(
             Key=key, 
             UpdateExpression=update_expression,
-            ExpressionAttributeValues=update_values,
-            ReturnValues="UPDATE_NEW"
+            ExpressionAttributeNames=update_name,
+            ExpressionAttributeValues=update_values
         )
 
     def scan_table_eq(self, filter_key=None, filter_value=None):

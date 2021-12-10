@@ -83,6 +83,12 @@
         "LogGroupName": "/aws/lambda/event-filter-dev-status"
       }
     },
+    "CronLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/event-filter-dev-cron"
+      }
+    },
     "SourceLambdaFunction": {
       "Type": "AWS::Lambda::Function",
       "Properties": {
@@ -90,7 +96,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/event-filter/dev/1638926969989-2021-12-08T01:29:29.989Z/event-filter.zip"
+          "S3Key": "serverless/event-filter/dev/1639099470296-2021-12-10T01:24:30.296Z/event-filter.zip"
         },
         "Handler": "handler_bd.source_handler",
         "Runtime": "python3.8",
@@ -112,9 +118,9 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/event-filter/dev/1638926969989-2021-12-08T01:29:29.989Z/event-filter.zip"
+          "S3Key": "serverless/event-filter/dev/1639099470296-2021-12-10T01:24:30.296Z/event-filter.zip"
         },
-        "Handler": "handler_sqs.status_handler",
+        "Handler": "handler_sqs.detail_handler",
         "Runtime": "python3.8",
         "FunctionName": "event-filter-dev-status",
         "MemorySize": 1024,
@@ -127,24 +133,93 @@
         "StatusLogGroup"
       ]
     },
-    "SourceLambdaVersionUjt8CnO8pV6PcS2Gud0I7ORqJb5m75sJRdGGbMkSAWY": {
+    "CronLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/event-filter/dev/1639099470296-2021-12-10T01:24:30.296Z/event-filter.zip"
+        },
+        "Handler": "handler_sqs.update_handler",
+        "Runtime": "python3.8",
+        "FunctionName": "event-filter-dev-cron",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Role": {
+          "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+        }
+      },
+      "DependsOn": [
+        "CronLogGroup"
+      ]
+    },
+    "SourceLambdaVersionUal2kVOXr4ofWW5bixS1D5SDK1zixivYzMHlYjMgd2Q": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "SourceLambdaFunction"
         },
-        "CodeSha256": "QT7ZvHTohwRjAdYLk9D9Q1jRFCxKzyip8dO+V6LyuYg="
+        "CodeSha256": "XeoQx/zpla+Wz2g3tecke0jRPc04302rTzsGkaYIiG0="
       }
     },
-    "StatusLambdaVersionWqCde0IJ9dEK0MfZEwTrztEzYw8wp4i1wxCGjAscz04": {
+    "StatusLambdaVersionsPDQGjZkvxhL68Ft2LHKQUCIJJfc7G5VCj5cBhXlHGc": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "StatusLambdaFunction"
         },
-        "CodeSha256": "QT7ZvHTohwRjAdYLk9D9Q1jRFCxKzyip8dO+V6LyuYg="
+        "CodeSha256": "XeoQx/zpla+Wz2g3tecke0jRPc04302rTzsGkaYIiG0="
+      }
+    },
+    "CronLambdaVersionui83lz85Ys6bZ719kfqPHp00W67pPHFUNe8vaMruCZ4": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "CronLambdaFunction"
+        },
+        "CodeSha256": "XeoQx/zpla+Wz2g3tecke0jRPc04302rTzsGkaYIiG0="
+      }
+    },
+    "CronEventsRuleSchedule1": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "ScheduleExpression": "cron(0/1 * * * ? *)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "CronLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "cronSchedule"
+          }
+        ]
+      }
+    },
+    "CronLambdaPermissionEventsRuleSchedule1": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "CronLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "CronEventsRuleSchedule1",
+            "Arn"
+          ]
+        }
       }
     },
     "Eventfilterdevsourcerule1EventBridgeRule": {
@@ -307,7 +382,7 @@
     "SourceLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "SourceLambdaVersionUjt8CnO8pV6PcS2Gud0I7ORqJb5m75sJRdGGbMkSAWY"
+        "Ref": "SourceLambdaVersionUal2kVOXr4ofWW5bixS1D5SDK1zixivYzMHlYjMgd2Q"
       },
       "Export": {
         "Name": "sls-event-filter-dev-SourceLambdaFunctionQualifiedArn"
@@ -316,10 +391,19 @@
     "StatusLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "StatusLambdaVersionWqCde0IJ9dEK0MfZEwTrztEzYw8wp4i1wxCGjAscz04"
+        "Ref": "StatusLambdaVersionsPDQGjZkvxhL68Ft2LHKQUCIJJfc7G5VCj5cBhXlHGc"
       },
       "Export": {
         "Name": "sls-event-filter-dev-StatusLambdaFunctionQualifiedArn"
+      }
+    },
+    "CronLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "CronLambdaVersionui83lz85Ys6bZ719kfqPHp00W67pPHFUNe8vaMruCZ4"
+      },
+      "Export": {
+        "Name": "sls-event-filter-dev-CronLambdaFunctionQualifiedArn"
       }
     }
   }

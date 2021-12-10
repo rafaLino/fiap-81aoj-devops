@@ -4,11 +4,12 @@ from datetime import datetime
 
 def source_handler(event, context):
     dao = BaseDAO("eventos-pizzaria")
+    print(event)
     dao.put_item({
-        "pedido": event["detail"]["pedido"],
+        "pedido": str(event["detail"]["pedido"]),
         "status": event["detail"]["status"],
         "cliente": event["detail"]["cliente"],
-        "time": datetime.now()
+        "time": str(datetime.now())
     })
 
     return True
